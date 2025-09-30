@@ -280,6 +280,40 @@ const pageTitle = 'AOE4 Strategy Guide Helper';
         status.style.color = isError ? '#f87171' : '#facc15';
       };
 
+      const autocompleteCachePrefix = 'aoe4meta:autocomplete:';
+      const memoryAutocompleteCache = new Map();
+
+      const readAutocompleteCache = (url) => {
+        if (memoryAutocompleteCache.has(url)) {
+          return memoryAutocompleteCache.get(url);
+        }
+        try {
+          const stored = sessionStorage.getItem(`${autocompleteCachePrefix}${url}`);
+          if (!stored) return null;
+          const parsed = JSON.parse(stored);
+          memoryAutocompleteCache.set(url, parsed);
+          return parsed;
+        } catch (error) {
+          console.warn('Failed to read autocomplete cache', error);
+          return null;
+        }
+      };
+
+      const writeAutocompleteCache = (url, payload) => {
+        memoryAutocompleteCache.set(url, payload);
+        try {
+          sessionStorage.setItem(`${autocompleteCachePrefix}${url}`, JSON.stringify(payload));
+        } catch (error) {
+          console.warn('Failed to persist autocomplete cache', error);
+        }
+      };
+
+      const selectPlayerId = (username, results) => {
+        const lower = username.trim().toLowerCase();
+        const exactMatch = results.find((entry) => entry.name?.toLowerCase() === lower);
+        return String(exactMatch?.id ?? results[0].id);
+      };
+
       const getPlayerId = async (username) => {
         const url = `https://aoe4world.com/api/v0/players/autocomplete?leaderboard=rm_1v1&query=${encodeURIComponent(
           username
@@ -290,22 +324,53 @@ const pageTitle = 'AOE4 Strategy Guide Helper';
           },
         };
 
+        const useCachedResults = () => {
+          const cached = readAutocompleteCache(url);
+          if (Array.isArray(cached) && cached.length > 0) {
+            return cached;
+          }
+          return null;
+        };
+
         let response = await fetch(url, request);
         if (response.status === 304) {
+          const cachedResults = useCachedResults();
+          if (cachedResults) {
+            return selectPlayerId(username, cachedResults);
+          }
           response = await fetch(url, { ...request, cache: 'reload' });
         }
+
         if (!response.ok) {
+          const cachedResults = useCachedResults();
+          if (cachedResults) {
+            return selectPlayerId(username, cachedResults);
+          }
           throw new Error('Failed to look up player.');
         }
 
-        const results = await response.json();
-
-        if (!Array.isArray(results) || results.length === 0) {
-          throw new Error('No players found with that username.');
+        let results;
+        try {
+          results = await response.json();
+        } catch (error) {
+          const cachedResults = useCachedResults();
+          if (cachedResults) {
+            return selectPlayerId(username, cachedResults);
+          }
+          throw new Error('Received an unreadable player response.');
         }
-        const lower = username.trim().toLowerCase();
-        const exactMatch = results.find((entry) => entry.name?.toLowerCase() === lower);
-        return String(exactMatch?.id ?? results[0].id);
+
+        if (Array.isArray(results) && results.length > 0) {
+          writeAutocompleteCache(url, results);
+          return selectPlayerId(username, results);
+        }
+
+        const cachedResults = useCachedResults();
+        if (cachedResults) {
+          return selectPlayerId(username, cachedResults);
+        }
+
+        throw new Error('No players found with that username.');
       };
 
       const getLastGame = async (playerId) => {
