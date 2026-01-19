@@ -1,11 +1,23 @@
 import { useState, useEffect } from "react";
+import { Minimize2, Maximize2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import HeroSection from "@/components/HeroSection";
 import CivilizationGuideCard from "@/components/CivilizationGuideCard";
 import { civilizationGuides } from "@/lib/guides";
 
 export default function Civilizations() {
   const [civSearch, setCivSearch] = useState("");
+  const [defaultFolded, setDefaultFolded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('defaultFolded') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('defaultFolded', String(defaultFolded));
+  }, [defaultFolded]);
 
   useEffect(() => {
     document.title = "Civilization Guides - AoE4 Meta";
@@ -57,9 +69,21 @@ export default function Civilizations() {
       <HeroSection 
         showAttribution={false}
         rightContent={
-          <p className="text-xs text-muted-foreground whitespace-nowrap" data-testid="text-civ-count">
-            {filteredCivs.length} civilization{filteredCivs.length !== 1 ? 's' : ''}
-          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={defaultFolded ? "default" : "outline"}
+              size="icon"
+              onClick={() => setDefaultFolded(!defaultFolded)}
+              data-testid="button-fold-toggle"
+              title={defaultFolded ? "Cards are folded by default (click to expand)" : "Cards are expanded by default (click to fold)"}
+              className="shrink-0"
+            >
+              {defaultFolded ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+            </Button>
+            <p className="text-xs text-muted-foreground whitespace-nowrap" data-testid="text-civ-count">
+              {filteredCivs.length} civilization{filteredCivs.length !== 1 ? 's' : ''}
+            </p>
+          </div>
         }
       >
         <Input
@@ -76,7 +100,7 @@ export default function Civilizations() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCivs.map((guide) => (
-              <CivilizationGuideCard key={guide.key} guide={guide} />
+              <CivilizationGuideCard key={guide.key} guide={guide} defaultFolded={defaultFolded} />
             ))}
           </div>
 

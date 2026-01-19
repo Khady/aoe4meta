@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Minimize2, Maximize2 } from "lucide-react";
 import HeroSection from "@/components/HeroSection";
 import PlayerSearchInput from "@/components/PlayerSearchInput";
 import CivilizationGuideCard from "@/components/CivilizationGuideCard";
 import MapGuideCard from "@/components/MapGuideCard";
 import { Button } from "@/components/ui/button";
 import { civilizationGuides, mapGuides } from "@/lib/guides";
-import type { Player, CivilizationKey } from "@shared/schema";
+import type { Player, CivilizationKey } from "@/lib/schema";
 
 export default function Home() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -16,6 +16,17 @@ export default function Home() {
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false);
   const [isAutoUpdating, setIsAutoUpdating] = useState(false);
   const [hashPlayerParam, setHashPlayerParam] = useState<string>('');
+  const [defaultFolded, setDefaultFolded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('defaultFolded') === 'true';
+    }
+    return false;
+  });
+
+  // Save defaultFolded to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('defaultFolded', String(defaultFolded));
+  }, [defaultFolded]);
 
   // Get player param from hash (format: #profileId-playerName)
   const getHashPlayerParam = (): string => {
@@ -203,13 +214,42 @@ export default function Home() {
         const rating = teamMember.rating ?? null;
         const mmr = teamMember.mmr ?? null;
         
+        // Max ratings are inside each mode object in the modes field
+        // e.g., modes.rm_team.max_rating, modes.rm_team.max_rating_7d, modes.rm_team.max_rating_1m
+        const modes = teamMember.modes || {};
+        
+        // Compute overall max rating as the highest max_rating across all standard modes
+        let computedMaxRating: number | null = null;
+        let computedMaxRatingElo: number | null = null;
+        
+        Object.entries(modes).forEach(([modeKey, modeData]: [string, any]) => {
+          if (modeData?.max_rating != null) {
+            if (modeKey.endsWith('_elo')) {
+              // ELO mode - track max for ELO display
+              if (computedMaxRatingElo === null || modeData.max_rating > computedMaxRatingElo) {
+                computedMaxRatingElo = modeData.max_rating;
+              }
+            } else {
+              // Standard mode - track max for rank display
+              if (computedMaxRating === null || modeData.max_rating > computedMaxRating) {
+                computedMaxRating = modeData.max_rating;
+              }
+            }
+          }
+        });
+        
+        const maxRating = computedMaxRating;
+        const maxRatingElo = computedMaxRatingElo;
+        
         return {
           name: teamMember.name,
           profileId: teamMember.profile_id,
           civKey: civKey,
           rating: rating,
           mmr: mmr,
-          modes: teamMember.modes || {},
+          maxRating: maxRating,
+          maxRatingElo: maxRatingElo,
+          modes: modes,
           result: teamMember.result,
           guide: civGuide,
           isSearchedPlayer: isSearched
@@ -243,7 +283,8 @@ export default function Home() {
           map: gameApiData.map,
           mapType: mapGuide.type,
           duration: gameApiData.duration,
-          result: searchedPlayerData.result
+          result: searchedPlayerData.result,
+          leaderboard: leaderboardKey
         },
         isFFA: isFFA,
         yourTeam: yourTeam,
@@ -446,16 +487,28 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <HeroSection
         rightContent={selectedPlayer ? (
-          <Button
-            variant={autoUpdateEnabled ? "default" : "outline"}
-            size="icon"
-            onClick={() => setAutoUpdateEnabled(!autoUpdateEnabled)}
-            data-testid="button-auto-update-toggle"
-            title={autoUpdateEnabled ? "Auto-update enabled (checks every minute)" : "Enable auto-update"}
-            className="shrink-0"
-          >
-            <RefreshCw className={`h-4 w-4 ${isAutoUpdating ? 'animate-spin' : ''}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={defaultFolded ? "default" : "outline"}
+              size="icon"
+              onClick={() => setDefaultFolded(!defaultFolded)}
+              data-testid="button-fold-toggle"
+              title={defaultFolded ? "Cards are folded by default (click to expand)" : "Cards are expanded by default (click to fold)"}
+              className="shrink-0"
+            >
+              {defaultFolded ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant={autoUpdateEnabled ? "default" : "outline"}
+              size="icon"
+              onClick={() => setAutoUpdateEnabled(!autoUpdateEnabled)}
+              data-testid="button-auto-update-toggle"
+              title={autoUpdateEnabled ? "Auto-update enabled (checks every minute)" : "Enable auto-update"}
+              className="shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${isAutoUpdating ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         ) : undefined}
       >
         <PlayerSearchInput 
@@ -489,8 +542,12 @@ export default function Home() {
                         playerProfileId={player.profileId}
                         rating={player.rating}
                         mmr={player.mmr}
+                        maxRating={player.maxRating}
+                        maxRatingElo={player.maxRatingElo}
                         modes={player.modes}
+                        currentLeaderboard={gameData.game.leaderboard}
                         isOnHomePage={true}
+                        defaultFolded={defaultFolded}
                       />
                     ))
                 ) : (
@@ -505,8 +562,12 @@ export default function Home() {
                         playerProfileId={player.profileId}
                         rating={player.rating}
                         mmr={player.mmr}
+                        maxRating={player.maxRating}
+                        maxRatingElo={player.maxRatingElo}
                         modes={player.modes}
+                        currentLeaderboard={gameData.game.leaderboard}
                         isOnHomePage={true}
+                        defaultFolded={defaultFolded}
                       />
                     ))
                 )}
@@ -514,7 +575,7 @@ export default function Home() {
 
               {/* Map Column */}
               <div>
-                <MapGuideCard guide={gameData.mapGuide} isOnHomePage={true} />
+                <MapGuideCard guide={gameData.mapGuide} isOnHomePage={true} defaultFolded={defaultFolded} />
               </div>
 
               {/* Right Column - Enemy Team (Team games) or All Other Players (FFA) */}
@@ -531,8 +592,12 @@ export default function Home() {
                         playerProfileId={player.profileId}
                         rating={player.rating}
                         mmr={player.mmr}
+                        maxRating={player.maxRating}
+                        maxRatingElo={player.maxRatingElo}
                         modes={player.modes}
+                        currentLeaderboard={gameData.game.leaderboard}
                         isOnHomePage={true}
+                        defaultFolded={defaultFolded}
                       />
                     ))
                 ) : (
@@ -545,8 +610,12 @@ export default function Home() {
                       playerProfileId={player.profileId}
                       rating={player.rating}
                       mmr={player.mmr}
+                      maxRating={player.maxRating}
+                      maxRatingElo={player.maxRatingElo}
                       modes={player.modes}
+                      currentLeaderboard={gameData.game.leaderboard}
                       isOnHomePage={true}
+                      defaultFolded={defaultFolded}
                     />
                   ))
                 )}

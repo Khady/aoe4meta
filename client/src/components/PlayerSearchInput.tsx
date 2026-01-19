@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Player } from "@shared/schema";
+import type { Player } from "@/lib/schema";
 
 interface PlayerSearchInputProps {
   onPlayerSelect: (player: Player) => void;

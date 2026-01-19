@@ -96,6 +96,12 @@ export default function HeroSection({ children, rightContent, showAttribution = 
             <AttributionLink className="sm:hidden" />
           )}
           
+          {rightContent && (
+            <div className="flex sm:hidden items-center justify-end gap-2">
+              {rightContent}
+            </div>
+          )}
+          
           <div className="flex-1 min-w-0">
             {children}
           </div>

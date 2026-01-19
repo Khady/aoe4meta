@@ -184,12 +184,14 @@ export function getStandardModes(modes: Record<string, any> | null | undefined):
   return Object.fromEntries(
     Object.entries(modes).filter(([key]) => {
       // Include modes that don't have suffixes like _elo, _ew, _chartacourse, etc.
-      // Standard modes: rm_solo, rm_team, qm_1v1, qm_2v2, qm_3v3, qm_4v4, qm_ffa, rm_ffa, etc.
-      return !key.includes('_elo') && 
+      // Standard modes: rm_solo, rm_1v1, rm_team, qm_1v1, qm_2v2, qm_3v3, qm_4v4, qm_ffa, rm_ffa, etc.
+      const isStandard = !key.includes('_elo') && 
              !key.includes('_ew') && 
              !key.includes('_chartacourse') && 
              !key.includes('_mapmonsters') && 
              !key.includes('_chaoticclimate');
+      
+      return isStandard;
     })
   );
 }

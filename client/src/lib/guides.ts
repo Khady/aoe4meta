@@ -1,4 +1,4 @@
-import type { CivilizationGuide, MapGuide, CivilizationKey } from "@shared/schema";
+import type { CivilizationGuide, MapGuide, CivilizationKey } from "./schema";
 
 // Import civilization markdown files
 import abbasidContent from "@/content/civilizations/abbasid.md?raw";
