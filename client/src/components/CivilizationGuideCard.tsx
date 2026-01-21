@@ -185,7 +185,9 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                   if (modeKey === 'rm_1v1' && modes['rm_solo']?.rating != null) return null;
                   if (modeData?.rating == null) return null;
                   
-                  const isCurrentGame = modeKey === currentLeaderboard;
+                  const isCurrentGame = modeKey === currentLeaderboard || 
+                    (modeKey === 'rm_solo' && currentLeaderboard === 'rm_1v1') ||
+                    (modeKey === 'rm_1v1' && currentLeaderboard === 'rm_solo');
                   const rankInfo = getRankFromRating(modeData.rating);
                   const eloModeKey = standardToEloMap[modeKey];
                   const eloData = eloModeKey ? eloModes[eloModeKey] : null;
@@ -196,14 +198,14 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                         <span 
                           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] cursor-default ${
                             isCurrentGame 
-                              ? 'bg-primary/20 text-primary font-semibold border border-primary/30' 
+                              ? 'bg-primary text-primary-foreground' 
                               : 'bg-muted/50 text-muted-foreground border border-border/50'
                           }`}
                         >
                           <span>{modeLabels[modeKey] || modeKey}:</span>
-                          <span className={isCurrentGame ? '' : 'text-foreground/80'}>{rankInfo?.shortLabel ?? '-'}</span>
-                          <span className="text-muted-foreground">·</span>
-                          <span className={`font-mono ${isCurrentGame ? '' : 'text-foreground/80'}`}>{modeData.rating}</span>
+                          <span className={isCurrentGame ? 'text-primary-foreground' : 'text-foreground/80'}>{rankInfo?.shortLabel ?? '-'}</span>
+                          <span className={isCurrentGame ? 'text-primary-foreground/70' : 'text-muted-foreground'}>·</span>
+                          <span className={`font-mono ${isCurrentGame ? 'text-primary-foreground' : 'text-foreground/80'}`}>{modeData.rating}</span>
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -212,9 +214,9 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                           <table className="w-full border-collapse text-xs">
                             <tbody>
                               <tr>
-                                <td className="py-0.5 pr-4">Current</td>
-                                <td className="py-0.5 pr-4">{rankInfo?.shortLabel ?? '-'}</td>
-                                <td className="py-0.5 text-right text-muted-foreground font-mono">
+                                <td className="py-0.5 pr-4 text-[#1c1e22]">Current</td>
+                                <td className="py-0.5 pr-4 text-[#1c1e22]">{rankInfo?.shortLabel ?? '-'}</td>
+                                <td className="py-0.5 text-right font-mono text-[#1c1e22]">
                                   {modeData.games_count != null ? `${modeData.wins_count ?? 0}W-${modeData.losses_count ?? 0}L` : ''}
                                 </td>
                               </tr>
@@ -222,7 +224,7 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                                 modeData.previous_seasons.slice(0, 6).map((season: any) => (
                                   <tr key={season.season}>
                                     <td className="py-0.5 pr-4 text-muted-foreground">S{season.season}</td>
-                                    <td className="py-0.5 pr-4">
+                                    <td className="py-0.5 pr-4 text-[#505662]">
                                       {season.rank_level?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? '-'}
                                     </td>
                                     <td className="py-0.5 text-right text-muted-foreground font-mono text-[10px]">
@@ -233,8 +235,10 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                               }
                             </tbody>
                           </table>
-                          <div className="border-t border-primary/20 my-4"></div>
-                          <div className="font-medium mb-2.5 mt-2 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
+                          <div className="h-2"></div>
+                          <div className="border-t border-gray-300"></div>
+                          <div className="h-2"></div>
+                          <div className="font-medium mb-2.5 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
                           <table className="w-full border-collapse font-mono text-xs">
                             <thead>
                               <tr className="border-b border-border/30">
@@ -247,19 +251,19 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                             </thead>
                             <tbody>
                               <tr>
-                                <td className="py-1.5 pr-2 font-sans text-foreground">Rating</td>
-                                <td className="py-1.5 px-2 text-right text-foreground">{modeData.rating ?? '-'}</td>
-                                <td className="py-1.5 px-2 text-right text-muted-foreground">{modeData.max_rating ?? '-'}</td>
-                                <td className="py-1.5 px-2 text-right text-muted-foreground/60">{modeData.max_rating_7d ?? '-'}</td>
-                                <td className="py-1.5 pl-2 text-right text-muted-foreground/60">{modeData.max_rating_1m ?? '-'}</td>
+                                <td className="py-0.5 pr-2 font-sans text-foreground">Rating</td>
+                                <td className="py-0.5 px-2 text-right text-foreground">{modeData.rating ?? '-'}</td>
+                                <td className="py-0.5 px-2 text-right text-muted-foreground">{modeData.max_rating ?? '-'}</td>
+                                <td className="py-0.5 px-2 text-right text-muted-foreground/60">{modeData.max_rating_7d ?? '-'}</td>
+                                <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{modeData.max_rating_1m ?? '-'}</td>
                               </tr>
                               {eloData?.rating != null && (
                                 <tr className="border-t border-border/20">
-                                  <td className="py-1.5 pr-2 font-sans text-foreground">ELO</td>
-                                  <td className="py-1.5 px-2 text-right text-foreground">{eloData.rating ?? '-'}</td>
-                                  <td className="py-1.5 px-2 text-right text-muted-foreground">{eloData.max_rating ?? '-'}</td>
-                                  <td className="py-1.5 px-2 text-right text-muted-foreground/60">{eloData.max_rating_7d ?? '-'}</td>
-                                  <td className="py-1.5 pl-2 text-right text-muted-foreground/60">{eloData.max_rating_1m ?? '-'}</td>
+                                  <td className="py-0.5 pr-2 font-sans text-foreground">ELO</td>
+                                  <td className="py-0.5 px-2 text-right text-foreground">{eloData.rating ?? '-'}</td>
+                                  <td className="py-0.5 px-2 text-right text-muted-foreground">{eloData.max_rating ?? '-'}</td>
+                                  <td className="py-0.5 px-2 text-right text-muted-foreground/60">{eloData.max_rating_7d ?? '-'}</td>
+                                  <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{eloData.max_rating_1m ?? '-'}</td>
                                 </tr>
                               )}
                             </tbody>
@@ -274,7 +278,9 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                   if (hasStandardMode) return null;
                   if (modeData?.rating == null) return null;
                   
-                  const isCurrentGame = modeKey === currentLeaderboard;
+                  const isCurrentGame = modeKey === currentLeaderboard || 
+                    (modeKey === 'rm_solo' && currentLeaderboard === 'rm_1v1') ||
+                    (modeKey === 'rm_1v1' && currentLeaderboard === 'rm_solo');
                   
                   return (
                     <Tooltip key={modeKey}>
@@ -316,8 +322,10 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                               }
                             </tbody>
                           </table>
-                          <div className="border-t border-primary/20 my-4"></div>
-                          <div className="font-medium mb-2.5 mt-2 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
+                          <div className="h-2"></div>
+                          <div className="border-t border-gray-300"></div>
+                          <div className="h-2"></div>
+                          <div className="font-medium mb-2.5 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
                           <table className="w-full border-collapse font-mono text-xs">
                             <thead>
                               <tr className="border-b border-border/30">
