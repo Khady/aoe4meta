@@ -258,7 +258,7 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                                 <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{modeData.max_rating_1m ?? '-'}</td>
                               </tr>
                               {eloData?.rating != null && (
-                                <tr className="border-t border-border/20">
+                                <tr>
                                   <td className="py-0.5 pr-2 font-sans text-foreground">ELO</td>
                                   <td className="py-0.5 px-2 text-right text-foreground">{eloData.rating ?? '-'}</td>
                                   <td className="py-0.5 px-2 text-right text-muted-foreground">{eloData.max_rating ?? '-'}</td>
