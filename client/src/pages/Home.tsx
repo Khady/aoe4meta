@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw, Minimize2, Maximize2, Clock, Calendar, Trophy, Globe, Users } from "lucide-react";
+import { Loader2, RefreshCw, Minimize2, Maximize2, Clock, Calendar, Trophy, Globe, Users, ExternalLink } from "lucide-react";
 import HeroSection from "@/components/HeroSection";
 import PlayerSearchInput from "@/components/PlayerSearchInput";
 import CivilizationGuideCard from "@/components/CivilizationGuideCard";
@@ -640,6 +640,17 @@ export default function Home() {
                   <RefreshCw className="h-3 w-3" />
                   <span>Updated {formatLastRefresh(lastRefreshTime)}</span>
                 </div>
+              )}
+              {selectedPlayer && gameData.game.gameId && (
+                <a 
+                  href={`https://aoe4world.com/players/${selectedPlayer.profile_id}-${encodeURIComponent(selectedPlayer.name)}/games/${gameData.game.gameId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-foreground transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  <span>View on AoE4 World</span>
+                </a>
               )}
             </div>
 
