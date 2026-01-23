@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw, Minimize2, Maximize2 } from "lucide-react";
+import { Loader2, RefreshCw, Minimize2, Maximize2, Clock, Calendar, Trophy, Globe, Users } from "lucide-react";
 import HeroSection from "@/components/HeroSection";
 import PlayerSearchInput from "@/components/PlayerSearchInput";
 import CivilizationGuideCard from "@/components/CivilizationGuideCard";
@@ -7,6 +7,58 @@ import MapGuideCard from "@/components/MapGuideCard";
 import { Button } from "@/components/ui/button";
 import { civilizationGuides, mapGuides } from "@/lib/guides";
 import type { Player, CivilizationKey } from "@/lib/schema";
+
+const modeLabels: Record<string, string> = {
+  rm_solo: "Ranked 1v1",
+  rm_1v1: "Ranked 1v1",
+  rm_2v2: "Ranked 2v2",
+  rm_3v3: "Ranked 3v3",
+  rm_4v4: "Ranked 4v4",
+  rm_team: "Ranked Team",
+  rm_ffa: "Ranked FFA",
+  qm_1v1: "Quick Match 1v1",
+  qm_2v2: "Quick Match 2v2",
+  qm_3v3: "Quick Match 3v3",
+  qm_4v4: "Quick Match 4v4",
+  qm_ffa: "Quick Match FFA",
+};
+
+const formatDuration = (seconds: number | null): string => {
+  if (!seconds) return '-';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const formatStartTime = (isoString: string | null): string => {
+  if (!isoString) return '-';
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+const formatLastRefresh = (date: Date | null): string => {
+  if (!date) return '';
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  
+  if (diffSecs < 10) return 'just now';
+  if (diffSecs < 60) return `${diffSecs}s ago`;
+  if (diffMins < 60) return `${diffMins}m ago`;
+  return `${Math.floor(diffMins / 60)}h ago`;
+};
 
 export default function Home() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -16,6 +68,8 @@ export default function Home() {
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false);
   const [isAutoUpdating, setIsAutoUpdating] = useState(false);
   const [hashPlayerParam, setHashPlayerParam] = useState<string>('');
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  const [, setRefreshTick] = useState(0);
   const [defaultFolded, setDefaultFolded] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('defaultFolded') === 'true';
@@ -27,6 +81,14 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem('defaultFolded', String(defaultFolded));
   }, [defaultFolded]);
+
+  // Tick every 30 seconds to update relative time displays
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshTick(t => t + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Get player param from hash (format: #profileId-playerName)
   const getHashPlayerParam = (): string => {
@@ -284,7 +346,10 @@ export default function Home() {
           mapType: mapGuide.type,
           duration: gameApiData.duration,
           result: searchedPlayerData.result,
-          leaderboard: leaderboardKey
+          leaderboard: leaderboardKey,
+          startedAt: gameApiData.started_at,
+          gameId: gameApiData.game_id,
+          server: gameApiData.server
         },
         isFFA: isFFA,
         yourTeam: yourTeam,
@@ -292,6 +357,7 @@ export default function Home() {
         ffaPlayers: ffaPlayers,
         mapGuide: mapGuide
       });
+      setLastRefreshTime(new Date());
     } catch (err) {
       console.error('Error fetching game data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load game data');
@@ -527,6 +593,49 @@ export default function Home() {
 
         {gameData && !isLoading && (
           <div className="px-4 sm:px-6 lg:px-8">
+            {/* Game Meta Info */}
+            <div className="mb-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <Trophy className="h-4 w-4" />
+                <span className={`font-medium ${
+                  gameData.game.leaderboard?.startsWith('rm_') 
+                    ? 'text-amber-600 dark:text-amber-400' 
+                    : 'text-sky-600 dark:text-sky-400'
+                }`}>
+                  {modeLabels[gameData.game.leaderboard] || gameData.game.leaderboard || 'Unknown Mode'}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                <span>{formatStartTime(gameData.game.startedAt)}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4" />
+                <span>{formatDuration(gameData.game.duration)}</span>
+              </div>
+              {gameData.game.server && (
+                <div className="flex items-center gap-1.5">
+                  <Globe className="h-4 w-4" />
+                  <span>{gameData.game.server}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <Users className="h-4 w-4" />
+                <span>
+                  {gameData.isFFA 
+                    ? `${gameData.ffaPlayers?.length || 0} players` 
+                    : `${gameData.yourTeam?.length || 0}v${gameData.enemyTeam?.length || 0}`
+                  }
+                </span>
+              </div>
+              {lastRefreshTime && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Updated {formatLastRefresh(lastRefreshTime)}</span>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column - Your Civilization (Team games) or Searched Player (FFA) */}
               <div className="space-y-6">

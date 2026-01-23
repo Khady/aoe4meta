@@ -49,26 +49,26 @@ const civIconMap: Record<CivilizationKey, string> = {
 
 const modeLabels: Record<string, string> = {
   // Standard ranked modes
-  rm_solo: "Ranked 1v1",
-  rm_1v1: "Ranked 1v1",
-  rm_2v2: "Ranked 2v2",
-  rm_3v3: "Ranked 3v3",
-  rm_4v4: "Ranked 4v4",
-  rm_team: "Ranked Team",
-  rm_ffa: "Ranked FFA",
+  rm_solo: "RK 1v1",
+  rm_1v1: "RK 1v1",
+  rm_2v2: "RK 2v2",
+  rm_3v3: "RK 3v3",
+  rm_4v4: "RK 4v4",
+  rm_team: "RK Team",
+  rm_ffa: "RK FFA",
   
   // Quick match modes
-  qm_1v1: "Quick Match 1v1",
-  qm_2v2: "Quick Match 2v2",
-  qm_3v3: "Quick Match 3v3",
-  qm_4v4: "Quick Match 4v4",
-  qm_ffa: "Quick Match FFA",
+  qm_1v1: "QM 1v1",
+  qm_2v2: "QM 2v2",
+  qm_3v3: "QM 3v3",
+  qm_4v4: "QM 4v4",
+  qm_ffa: "QM FFA",
   
   // ELO modes (for display when showing standalone)
-  rm_1v1_elo: "Ranked 1v1",
-  rm_2v2_elo: "Ranked 2v2",
-  rm_3v3_elo: "Ranked 3v3",
-  rm_4v4_elo: "Ranked 4v4"
+  rm_1v1_elo: "RK 1v1",
+  rm_2v2_elo: "RK 2v2",
+  rm_3v3_elo: "RK 3v3",
+  rm_4v4_elo: "RK 4v4"
 };
 
 const standardToEloMap: Record<string, string> = {
@@ -84,6 +84,33 @@ const eloToStandardMap: Record<string, string> = {
   rm_2v2_elo: "rm_2v2",
   rm_3v3_elo: "rm_3v3",
   rm_4v4_elo: "rm_4v4",
+};
+
+const getModePlayerCount = (modeKey: string): number => {
+  if (modeKey.includes('solo') || modeKey.includes('1v1')) return 2;
+  if (modeKey.includes('2v2')) return 4;
+  if (modeKey.includes('3v3')) return 6;
+  if (modeKey.includes('4v4')) return 8;
+  if (modeKey.includes('ffa')) return 10;
+  if (modeKey.includes('team')) return 9;
+  return 99;
+};
+
+const getModeChipStyles = (modeKey: string, isCurrentGame: boolean): string => {
+  const isRanked = modeKey.startsWith('rm_');
+  const is1v1 = modeKey.includes('solo') || modeKey.includes('1v1');
+  
+  if (isCurrentGame) {
+    return 'bg-primary text-primary-foreground';
+  }
+  
+  const borderStyle = isRanked ? 'border' : 'border border-dashed';
+  
+  if (is1v1) {
+    return `bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 ${borderStyle} border-amber-300 dark:border-amber-700`;
+  } else {
+    return `bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-200 ${borderStyle} border-sky-300 dark:border-sky-700`;
+  }
 };
 
 export default function CivilizationGuideCard({ guide, title, playerName, playerProfileId, rating, mmr, maxRating, maxRatingElo, modes = {}, currentLeaderboard, isOnHomePage = false, defaultFolded = false }: CivilizationGuideCardProps) {
@@ -181,176 +208,124 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
             {playerName && (Object.keys(standardModes).some((k) => (standardModes as any)[k]?.rating != null) || 
               Object.keys(eloModes).some((k) => (eloModes as any)[k]?.rating != null)) && (
               <div className="mt-1.5 flex flex-wrap gap-1">
-                {Object.entries(standardModes).map(([modeKey, modeData]: [string, any]) => {
-                  if (modeKey === 'rm_1v1' && modes['rm_solo']?.rating != null) return null;
-                  if (modeData?.rating == null) return null;
+                {(() => {
+                  const allModeChips: Array<{ modeKey: string; modeData: any; isEloOnly: boolean }> = [];
                   
-                  const isCurrentGame = modeKey === currentLeaderboard || 
-                    (modeKey === 'rm_solo' && currentLeaderboard === 'rm_1v1') ||
-                    (modeKey === 'rm_1v1' && currentLeaderboard === 'rm_solo');
-                  const rankInfo = getRankFromRating(modeData.rating);
-                  const eloModeKey = standardToEloMap[modeKey];
-                  const eloData = eloModeKey ? eloModes[eloModeKey] : null;
+                  Object.entries(standardModes).forEach(([modeKey, modeData]: [string, any]) => {
+                    if (modeKey === 'rm_1v1' && modes['rm_solo']?.rating != null) return;
+                    if (modeData?.rating == null) return;
+                    allModeChips.push({ modeKey, modeData, isEloOnly: false });
+                  });
                   
-                  return (
-                    <Tooltip key={modeKey}>
-                      <TooltipTrigger asChild>
-                        <span 
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] cursor-default ${
-                            isCurrentGame 
-                              ? 'bg-primary text-primary-foreground' 
-                              : 'bg-muted/50 text-muted-foreground border border-border/50'
-                          }`}
-                        >
-                          <span>{modeLabels[modeKey] || modeKey}:</span>
-                          <span className={isCurrentGame ? 'text-primary-foreground' : 'text-foreground/80'}>{rankInfo?.shortLabel ?? '-'}</span>
-                          <span className={isCurrentGame ? 'text-primary-foreground/70' : 'text-muted-foreground'}>·</span>
-                          <span className={`font-mono ${isCurrentGame ? 'text-primary-foreground' : 'text-foreground/80'}`}>{modeData.rating}</span>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-xs space-y-0.5 font-normal">
-                          <div className="font-medium mb-2.5 mt-2 text-muted-foreground uppercase tracking-wider text-xs">Rank</div>
-                          <table className="w-full border-collapse text-xs">
-                            <tbody>
-                              <tr>
-                                <td className="py-0.5 pr-4 text-[#1c1e22]">Current</td>
-                                <td className="py-0.5 pr-4 text-[#1c1e22]">{rankInfo?.shortLabel ?? '-'}</td>
-                                <td className="py-0.5 text-right font-mono text-[#1c1e22]">
-                                  {modeData.games_count != null ? `${modeData.wins_count ?? 0}W-${modeData.losses_count ?? 0}L` : ''}
-                                </td>
-                              </tr>
-                              {modeData.previous_seasons?.length > 0 && 
-                                modeData.previous_seasons.slice(0, 6).map((season: any) => (
-                                  <tr key={season.season}>
-                                    <td className="py-0.5 pr-4 text-muted-foreground">S{season.season}</td>
-                                    <td className="py-0.5 pr-4 text-[#505662]">
-                                      {season.rank_level?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? '-'}
-                                    </td>
-                                    <td className="py-0.5 text-right text-muted-foreground font-mono text-[10px]">
-                                      {season.games_count != null ? `${season.wins_count ?? 0}W-${season.losses_count ?? 0}L` : ''}
-                                    </td>
-                                  </tr>
-                                ))
-                              }
-                            </tbody>
-                          </table>
-                          <div className="h-2"></div>
-                          <div className="border-t border-gray-300"></div>
-                          <div className="h-2"></div>
-                          <div className="font-medium mb-2.5 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
-                          <table className="w-full border-collapse font-mono text-xs">
-                            <thead>
-                              <tr className="border-b border-border/30">
-                                <th className="py-1 pr-2 font-sans text-left font-normal text-muted-foreground">Type</th>
-                                <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Now</th>
-                                <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Max</th>
-                                <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">7d</th>
-                                <th className="py-1 pl-2 text-right font-sans font-normal text-muted-foreground">1m</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="py-0.5 pr-2 font-sans text-foreground">Rating</td>
-                                <td className="py-0.5 px-2 text-right text-foreground">{modeData.rating ?? '-'}</td>
-                                <td className="py-0.5 px-2 text-right text-muted-foreground">{modeData.max_rating ?? '-'}</td>
-                                <td className="py-0.5 px-2 text-right text-muted-foreground/60">{modeData.max_rating_7d ?? '-'}</td>
-                                <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{modeData.max_rating_1m ?? '-'}</td>
-                              </tr>
-                              {eloData?.rating != null && (
-                                <tr>
-                                  <td className="py-0.5 pr-2 font-sans text-foreground">ELO</td>
-                                  <td className="py-0.5 px-2 text-right text-foreground">{eloData.rating ?? '-'}</td>
-                                  <td className="py-0.5 px-2 text-right text-muted-foreground">{eloData.max_rating ?? '-'}</td>
-                                  <td className="py-0.5 px-2 text-right text-muted-foreground/60">{eloData.max_rating_7d ?? '-'}</td>
-                                  <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{eloData.max_rating_1m ?? '-'}</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-                {Object.entries(eloModes).map(([modeKey, modeData]: [string, any]) => {
-                  const hasStandardMode = eloToStandardMap[modeKey];
-                  if (hasStandardMode) return null;
-                  if (modeData?.rating == null) return null;
+                  Object.entries(eloModes).forEach(([modeKey, modeData]: [string, any]) => {
+                    const standardModeKey = eloToStandardMap[modeKey];
+                    const standardModeHasData = standardModeKey && standardModes[standardModeKey]?.rating != null;
+                    if (standardModeHasData) return;
+                    if (modeData?.rating == null) return;
+                    allModeChips.push({ modeKey, modeData, isEloOnly: true });
+                  });
                   
-                  const isCurrentGame = modeKey === currentLeaderboard || 
-                    (modeKey === 'rm_solo' && currentLeaderboard === 'rm_1v1') ||
-                    (modeKey === 'rm_1v1' && currentLeaderboard === 'rm_solo');
-                  
-                  return (
-                    <Tooltip key={modeKey}>
-                      <TooltipTrigger asChild>
-                        <span 
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] cursor-default ${
-                            isCurrentGame 
-                              ? 'bg-primary/20 text-primary font-semibold border border-primary/30' 
-                              : 'bg-muted/50 text-muted-foreground border border-border/50'
-                          }`}
-                        >
-                          <span>{modeLabels[modeKey] || modeKey}:</span>
-                          <span className="text-muted-foreground">ELO</span>
-                          <span className={`font-mono ${isCurrentGame ? '' : 'text-foreground/80'}`}>{modeData.rating}</span>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-xs space-y-0.5 font-normal">
-                          <div className="font-medium mb-2.5 mt-2 text-muted-foreground uppercase tracking-wider text-xs">ELO</div>
-                          <table className="w-full border-collapse text-xs">
-                            <tbody>
-                              <tr>
-                                <td className="py-0.5 pr-4">Current</td>
-                                <td className="py-0.5 pr-4 font-mono">{modeData.rating ?? '-'}</td>
-                                <td className="py-0.5 text-right text-muted-foreground font-mono">
-                                  {modeData.games_count != null ? `${modeData.wins_count ?? 0}W-${modeData.losses_count ?? 0}L` : ''}
-                                </td>
-                              </tr>
-                              {modeData.previous_seasons?.length > 0 && 
-                                modeData.previous_seasons.slice(0, 6).map((season: any) => (
-                                  <tr key={season.season}>
-                                    <td className="py-0.5 pr-4 text-muted-foreground">S{season.season}</td>
-                                    <td className="py-0.5 pr-4 font-mono">{season.rating ?? '-'}</td>
-                                    <td className="py-0.5 text-right text-muted-foreground font-mono text-[10px]">
-                                      {season.games_count != null ? `${season.wins_count ?? 0}W-${season.losses_count ?? 0}L` : ''}
+                  return allModeChips
+                    .sort((a, b) => getModePlayerCount(a.modeKey) - getModePlayerCount(b.modeKey))
+                    .map(({ modeKey, modeData, isEloOnly }) => {
+                      const rankedTeamModes = ['rm_2v2', 'rm_3v3', 'rm_4v4', 'rm_team'];
+                      const eloToBaseMode: Record<string, string> = {
+                        'rm_1v1_elo': 'rm_1v1',
+                        'rm_2v2_elo': 'rm_2v2',
+                        'rm_3v3_elo': 'rm_3v3',
+                        'rm_4v4_elo': 'rm_4v4',
+                      };
+                      const baseModeForElo = eloToBaseMode[modeKey];
+                      const isCurrentGame = modeKey === currentLeaderboard || 
+                        (modeKey === 'rm_solo' && currentLeaderboard === 'rm_1v1') ||
+                        (modeKey === 'rm_1v1' && currentLeaderboard === 'rm_solo') ||
+                        (modeKey === 'rm_team' && rankedTeamModes.includes(currentLeaderboard || '')) ||
+                        (baseModeForElo != null && baseModeForElo === currentLeaderboard);
+                      const rankInfo = getRankFromRating(modeData.rating);
+                      const eloModeKey = standardToEloMap[modeKey];
+                      const eloData = eloModeKey ? eloModes[eloModeKey] : null;
+                      
+                      return (
+                        <Tooltip key={modeKey}>
+                          <TooltipTrigger asChild>
+                            <span 
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] cursor-default ${getModeChipStyles(modeKey, isCurrentGame)}`}
+                            >
+                              <span>{modeLabels[modeKey] || modeKey}</span>
+                              <span className={isCurrentGame ? 'text-primary-foreground/70' : 'opacity-50'}>·</span>
+                              <span className={isCurrentGame ? 'text-primary-foreground' : ''}>{rankInfo?.shortLabel ?? '-'}</span>
+                              <span className={isCurrentGame ? 'text-primary-foreground/70' : 'opacity-50'}>·</span>
+                              <span className={`font-mono ${isCurrentGame ? 'text-primary-foreground' : ''}`}>{modeData.rating}</span>
+                              <span className={isCurrentGame ? 'text-primary-foreground/70' : 'opacity-50'}>·</span>
+                              <span className={`font-mono ${isCurrentGame ? 'text-primary-foreground' : ''}`}>{modeData.games_count ?? 0}g</span>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-xs space-y-0.5 font-normal">
+                              <div className="font-medium mb-2.5 mt-2 text-muted-foreground uppercase tracking-wider text-xs">{isEloOnly ? 'ELO' : 'Rank'}</div>
+                              <table className="w-full border-collapse text-xs">
+                                <tbody>
+                                  <tr>
+                                    <td className="py-0.5 pr-4 text-[#1c1e22]">Current</td>
+                                    <td className="py-0.5 pr-4 text-[#1c1e22]">{isEloOnly ? modeData.rating : rankInfo?.shortLabel ?? '-'}</td>
+                                    <td className="py-0.5 text-right font-mono text-[#1c1e22]">
+                                      {modeData.games_count != null ? `${modeData.wins_count ?? 0}W-${modeData.losses_count ?? 0}L` : ''}
                                     </td>
                                   </tr>
-                                ))
-                              }
-                            </tbody>
-                          </table>
-                          <div className="h-2"></div>
-                          <div className="border-t border-gray-300"></div>
-                          <div className="h-2"></div>
-                          <div className="font-medium mb-2.5 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
-                          <table className="w-full border-collapse font-mono text-xs">
-                            <thead>
-                              <tr className="border-b border-border/30">
-                                <th className="py-1 pr-2 font-sans text-left font-normal text-muted-foreground">Type</th>
-                                <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Now</th>
-                                <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Max</th>
-                                <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">7d</th>
-                                <th className="py-1 pl-2 text-right font-sans font-normal text-muted-foreground">1m</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="py-1.5 pr-2 font-sans text-foreground">ELO</td>
-                                <td className="py-1.5 px-2 text-right text-foreground">{modeData.rating ?? '-'}</td>
-                                <td className="py-1.5 px-2 text-right text-muted-foreground">{modeData.max_rating ?? '-'}</td>
-                                <td className="py-1.5 px-2 text-right text-muted-foreground/60">{modeData.max_rating_7d ?? '-'}</td>
-                                <td className="py-1.5 pl-2 text-right text-muted-foreground/60">{modeData.max_rating_1m ?? '-'}</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
+                                  {modeData.previous_seasons?.length > 0 && 
+                                    modeData.previous_seasons.slice(0, 6).map((season: any) => (
+                                      <tr key={season.season}>
+                                        <td className="py-0.5 pr-4 text-muted-foreground">S{season.season}</td>
+                                        <td className="py-0.5 pr-4 text-[#505662]">
+                                          {isEloOnly ? (season.rating ?? '-') : (season.rank_level?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? '-')}
+                                        </td>
+                                        <td className="py-0.5 text-right text-muted-foreground font-mono text-[10px]">
+                                          {season.games_count != null ? `${season.wins_count ?? 0}W-${season.losses_count ?? 0}L` : ''}
+                                        </td>
+                                      </tr>
+                                    ))
+                                  }
+                                </tbody>
+                              </table>
+                              <div className="h-2"></div>
+                              <div className="border-t border-gray-300"></div>
+                              <div className="h-2"></div>
+                              <div className="font-medium mb-2.5 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
+                              <table className="w-full border-collapse font-mono text-xs">
+                                <thead>
+                                  <tr className="border-b border-border/30">
+                                    <th className="py-1 pr-2 font-sans text-left font-normal text-muted-foreground">Type</th>
+                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Now</th>
+                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Max</th>
+                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">7d</th>
+                                    <th className="py-1 pl-2 text-right font-sans font-normal text-muted-foreground">1m</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td className="py-0.5 pr-2 font-sans text-foreground">{isEloOnly ? 'ELO' : 'Rating'}</td>
+                                    <td className="py-0.5 px-2 text-right text-foreground">{modeData.rating ?? '-'}</td>
+                                    <td className="py-0.5 px-2 text-right text-muted-foreground">{modeData.max_rating ?? '-'}</td>
+                                    <td className="py-0.5 px-2 text-right text-muted-foreground/60">{modeData.max_rating_7d ?? '-'}</td>
+                                    <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{modeData.max_rating_1m ?? '-'}</td>
+                                  </tr>
+                                  {!isEloOnly && eloData?.rating != null && (
+                                    <tr>
+                                      <td className="py-0.5 pr-2 font-sans text-foreground">ELO</td>
+                                      <td className="py-0.5 px-2 text-right text-foreground">{eloData.rating ?? '-'}</td>
+                                      <td className="py-0.5 px-2 text-right text-muted-foreground">{eloData.max_rating ?? '-'}</td>
+                                      <td className="py-0.5 px-2 text-right text-muted-foreground/60">{eloData.max_rating_7d ?? '-'}</td>
+                                      <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{eloData.max_rating_1m ?? '-'}</td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    });
+                })()}
               </div>
             )}
           </div>
