@@ -98,19 +98,34 @@ const getModePlayerCount = (modeKey: string): number => {
 
 const getModeChipStyles = (modeKey: string, isCurrentGame: boolean): string => {
   const isRanked = modeKey.startsWith('rm_');
-  const is1v1 = modeKey.includes('solo') || modeKey.includes('1v1');
+  const borderStyle = isRanked ? 'border' : 'border border-dashed';
   
   if (isCurrentGame) {
     return 'bg-primary text-primary-foreground';
   }
   
-  const borderStyle = isRanked ? 'border' : 'border border-dashed';
+  const is1v1 = modeKey.includes('solo') || modeKey.includes('1v1');
+  const is2v2 = modeKey.includes('2v2');
+  const is3v3 = modeKey.includes('3v3');
+  const is4v4 = modeKey.includes('4v4');
+  const isTeam = modeKey.includes('team');
+  const isFFA = modeKey.includes('ffa');
   
   if (is1v1) {
-    return `bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 ${borderStyle} border-amber-300 dark:border-amber-700`;
-  } else {
-    return `bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-200 ${borderStyle} border-sky-300 dark:border-sky-700`;
+    return `bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 ${borderStyle} border-blue-300 dark:border-blue-700`;
+  } else if (is2v2) {
+    return `bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 ${borderStyle} border-red-300 dark:border-red-700`;
+  } else if (is3v3) {
+    return `bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 ${borderStyle} border-yellow-300 dark:border-yellow-700`;
+  } else if (is4v4) {
+    return `bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200 ${borderStyle} border-teal-300 dark:border-teal-700`;
+  } else if (isTeam) {
+    return `bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 ${borderStyle} border-purple-300 dark:border-purple-700`;
+  } else if (isFFA) {
+    return `bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-200 ${borderStyle} border-pink-300 dark:border-pink-700`;
   }
+  
+  return `bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200 ${borderStyle} border-gray-300 dark:border-gray-700`;
 };
 
 export default function CivilizationGuideCard({ guide, title, playerName, playerProfileId, rating, mmr, maxRating, maxRatingElo, modes = {}, currentLeaderboard, isOnHomePage = false, defaultFolded = false }: CivilizationGuideCardProps) {
@@ -262,7 +277,70 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="text-xs space-y-0.5 font-normal">
-                              <div className="font-medium mb-2.5 mt-2 text-muted-foreground uppercase tracking-wider text-xs">{isEloOnly ? 'ELO' : 'Rank'}</div>
+                              <div className="font-medium mb-2.5 mt-2 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
+                              <table className="w-full border-collapse font-mono text-xs">
+                                <thead>
+                                  <tr className="border-b border-border/30">
+                                    <th className="py-1 pr-2 font-sans text-left font-normal text-muted-foreground">Type</th>
+                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Now</th>
+                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Max</th>
+                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">7d</th>
+                                    <th className="py-1 pl-2 text-right font-sans font-normal text-muted-foreground">1m</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td className="py-0.5 pr-2 font-sans text-foreground">{isEloOnly ? 'ELO' : 'Rating'}</td>
+                                    <td className="py-0.5 px-2 text-right text-foreground">{modeData.rating ?? '-'}</td>
+                                    <td className="py-0.5 px-2 text-right text-muted-foreground">
+                                      {modeData.max_rating ?? '-'}
+                                      {modeData.rating != null && modeData.max_rating != null && modeData.rating !== modeData.max_rating && (
+                                        <span className="text-[10px] ml-0.5 text-red-400">({modeData.rating - modeData.max_rating})</span>
+                                      )}
+                                    </td>
+                                    <td className="py-0.5 px-2 text-right text-muted-foreground/60">
+                                      {modeData.max_rating_7d ?? '-'}
+                                      {modeData.rating != null && modeData.max_rating_7d != null && modeData.rating !== modeData.max_rating_7d && (
+                                        <span className="text-[10px] ml-0.5 text-red-400">({modeData.rating - modeData.max_rating_7d})</span>
+                                      )}
+                                    </td>
+                                    <td className="py-0.5 pl-2 text-right text-muted-foreground/60">
+                                      {modeData.max_rating_1m ?? '-'}
+                                      {modeData.rating != null && modeData.max_rating_1m != null && modeData.rating !== modeData.max_rating_1m && (
+                                        <span className="text-[10px] ml-0.5 text-red-400">({modeData.rating - modeData.max_rating_1m})</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                  {!isEloOnly && eloData?.rating != null && (
+                                    <tr>
+                                      <td className="py-0.5 pr-2 font-sans text-foreground">ELO</td>
+                                      <td className="py-0.5 px-2 text-right text-foreground">{eloData.rating ?? '-'}</td>
+                                      <td className="py-0.5 px-2 text-right text-muted-foreground">
+                                        {eloData.max_rating ?? '-'}
+                                        {eloData.rating != null && eloData.max_rating != null && eloData.rating !== eloData.max_rating && (
+                                          <span className="text-[10px] ml-0.5 text-red-400">({eloData.rating - eloData.max_rating})</span>
+                                        )}
+                                      </td>
+                                      <td className="py-0.5 px-2 text-right text-muted-foreground/60">
+                                        {eloData.max_rating_7d ?? '-'}
+                                        {eloData.rating != null && eloData.max_rating_7d != null && eloData.rating !== eloData.max_rating_7d && (
+                                          <span className="text-[10px] ml-0.5 text-red-400">({eloData.rating - eloData.max_rating_7d})</span>
+                                        )}
+                                      </td>
+                                      <td className="py-0.5 pl-2 text-right text-muted-foreground/60">
+                                        {eloData.max_rating_1m ?? '-'}
+                                        {eloData.rating != null && eloData.max_rating_1m != null && eloData.rating !== eloData.max_rating_1m && (
+                                          <span className="text-[10px] ml-0.5 text-red-400">({eloData.rating - eloData.max_rating_1m})</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                              <div className="h-2"></div>
+                              <div className="border-t border-gray-300"></div>
+                              <div className="h-2"></div>
+                              <div className="font-medium mb-2.5 text-muted-foreground uppercase tracking-wider text-xs">{isEloOnly ? 'ELO' : 'Rank'}</div>
                               <table className="w-full border-collapse text-xs">
                                 <tbody>
                                   <tr>
@@ -285,39 +363,6 @@ export default function CivilizationGuideCard({ guide, title, playerName, player
                                       </tr>
                                     ))
                                   }
-                                </tbody>
-                              </table>
-                              <div className="h-2"></div>
-                              <div className="border-t border-gray-300"></div>
-                              <div className="h-2"></div>
-                              <div className="font-medium mb-2.5 text-muted-foreground uppercase tracking-wider text-xs">Statistics</div>
-                              <table className="w-full border-collapse font-mono text-xs">
-                                <thead>
-                                  <tr className="border-b border-border/30">
-                                    <th className="py-1 pr-2 font-sans text-left font-normal text-muted-foreground">Type</th>
-                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Now</th>
-                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">Max</th>
-                                    <th className="py-1 px-2 text-right font-sans font-normal text-muted-foreground">7d</th>
-                                    <th className="py-1 pl-2 text-right font-sans font-normal text-muted-foreground">1m</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr>
-                                    <td className="py-0.5 pr-2 font-sans text-foreground">{isEloOnly ? 'ELO' : 'Rating'}</td>
-                                    <td className="py-0.5 px-2 text-right text-foreground">{modeData.rating ?? '-'}</td>
-                                    <td className="py-0.5 px-2 text-right text-muted-foreground">{modeData.max_rating ?? '-'}</td>
-                                    <td className="py-0.5 px-2 text-right text-muted-foreground/60">{modeData.max_rating_7d ?? '-'}</td>
-                                    <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{modeData.max_rating_1m ?? '-'}</td>
-                                  </tr>
-                                  {!isEloOnly && eloData?.rating != null && (
-                                    <tr>
-                                      <td className="py-0.5 pr-2 font-sans text-foreground">ELO</td>
-                                      <td className="py-0.5 px-2 text-right text-foreground">{eloData.rating ?? '-'}</td>
-                                      <td className="py-0.5 px-2 text-right text-muted-foreground">{eloData.max_rating ?? '-'}</td>
-                                      <td className="py-0.5 px-2 text-right text-muted-foreground/60">{eloData.max_rating_7d ?? '-'}</td>
-                                      <td className="py-0.5 pl-2 text-right text-muted-foreground/60">{eloData.max_rating_1m ?? '-'}</td>
-                                    </tr>
-                                  )}
                                 </tbody>
                               </table>
                             </div>

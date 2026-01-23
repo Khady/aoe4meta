@@ -598,9 +598,16 @@ export default function Home() {
               <div className="flex items-center gap-1.5">
                 <Trophy className="h-4 w-4" />
                 <span className={`font-medium ${
-                  gameData.game.leaderboard?.startsWith('rm_') 
-                    ? 'text-amber-600 dark:text-amber-400' 
-                    : 'text-sky-600 dark:text-sky-400'
+                  (() => {
+                    const mode = gameData.game.leaderboard || '';
+                    if (mode.includes('solo') || mode.includes('1v1')) return 'text-blue-600 dark:text-blue-400';
+                    if (mode.includes('2v2')) return 'text-red-600 dark:text-red-400';
+                    if (mode.includes('3v3')) return 'text-yellow-600 dark:text-yellow-400';
+                    if (mode.includes('4v4')) return 'text-teal-600 dark:text-teal-400';
+                    if (mode.includes('team')) return 'text-purple-600 dark:text-purple-400';
+                    if (mode.includes('ffa')) return 'text-pink-600 dark:text-pink-400';
+                    return 'text-gray-600 dark:text-gray-400';
+                  })()
                 }`}>
                   {modeLabels[gameData.game.leaderboard] || gameData.game.leaderboard || 'Unknown Mode'}
                 </span>
